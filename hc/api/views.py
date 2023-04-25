@@ -144,10 +144,10 @@ def _update(check, spec):
                 raise BadChannelException("empty channel identifier")
 
             matches = [c for c in available if str(c.code) == s or c.name == s]
-            if len(matches) == 0:
-                raise BadChannelException("invalid channel identifier: %s" % s)
+            if not matches:
+                raise BadChannelException(f"invalid channel identifier: {s}")
             elif len(matches) > 1:
-                raise BadChannelException("non-unique channel identifier: %s" % s)
+                raise BadChannelException(f"non-unique channel identifier: {s}")
 
             new_channels.add(matches[0])
 
@@ -174,11 +174,12 @@ def _update(check, spec):
             check.grace = new_grace
             need_save = True
 
-    if "schedule" in spec:
-        if check.kind != "cron" or check.schedule != spec["schedule"]:
-            check.kind = "cron"
-            check.schedule = spec["schedule"]
-            need_save = True
+    if "schedule" in spec and (
+        check.kind != "cron" or check.schedule != spec["schedule"]
+    ):
+        check.kind = "cron"
+        check.schedule = spec["schedule"]
+        need_save = True
 
     if "subject" in spec:
         check.success_kw = spec["subject"]
@@ -229,12 +230,11 @@ def get_checks(request):
         # approximate filtering by tags
         q = q.filter(tags__contains=tag)
 
-    checks = []
-    for check in q:
-        # precise, final filtering
-        if not tags or check.matches_tag_set(tags):
-            checks.append(check.to_dict(readonly=request.readonly, v=request.v))
-
+    checks = [
+        check.to_dict(readonly=request.readonly, v=request.v)
+        for check in q
+        if not tags or check.matches_tag_set(tags)
+    ]
     return JsonResponse({"checks": checks})
 
 
@@ -411,9 +411,11 @@ def pings(request, code):
                 num_misses += 1
             else:
                 ping.duration = None
-                if starts[ping.rid]:
-                    if ping.created - starts[ping.rid] < MAX_DURATION:
-                        ping.duration = ping.created - starts[ping.rid]
+                if (
+                    starts[ping.rid]
+                    and ping.created - starts[ping.rid] < MAX_DURATION
+                ):
+                    ping.duration = ping.created - starts[ping.rid]
 
             starts[ping.rid] = None
 
@@ -440,12 +442,10 @@ def ping_body(request, code, n):
         raise Http404()
 
     ping = get_object_or_404(Ping, owner=check, n=n)
-    body = ping.get_body_bytes()
-    if not body:
+    if body := ping.get_body_bytes():
+        return HttpResponse(body, content_type="text/plain")
+    else:
         raise Http404()
-
-    response = HttpResponse(body, content_type="text/plain")
-    return response
 
 
 def flips(request, check):
@@ -494,14 +494,13 @@ def flips_by_unique_key(request, unique_key):
 @csrf_exempt
 @authorize_read
 def badges(request):
-    tags = set(["*"])
+    tags = {"*"}
     for check in Check.objects.filter(project=request.project):
         tags.update(check.tags_list())
 
     key = request.project.badge_key
-    badges = {}
-    for tag in tags:
-        badges[tag] = {
+    badges = {
+        tag: {
             "svg": get_badge_url(key, tag),
             "svg3": get_badge_url(key, tag, with_late=True),
             "json": get_badge_url(key, tag, fmt="json"),
@@ -509,7 +508,8 @@ def badges(request):
             "shields": get_badge_url(key, tag, fmt="shields"),
             "shields3": get_badge_url(key, tag, fmt="shields", with_late=True),
         }
-
+        for tag in tags
+    }
     return JsonResponse({"badges": badges})
 
 
@@ -519,10 +519,7 @@ def badge(request, badge_key, signature, tag, fmt):
     if fmt not in ("svg", "json", "shields"):
         return HttpResponseNotFound()
 
-    with_late = True
-    if len(signature) == 10 and signature.endswith("-2"):
-        with_late = False
-
+    with_late = len(signature) != 10 or not signature.endswith("-2")
     if not check_signature(badge_key, tag, signature):
         return HttpResponseNotFound()
 

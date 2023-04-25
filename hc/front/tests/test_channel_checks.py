@@ -14,7 +14,7 @@ class ChannelChecksTestCase(BaseTestCase):
         Check.objects.create(project=self.project, name="Database Backups")
 
     def test_it_works(self):
-        url = "/integrations/%s/checks/" % self.channel.code
+        url = f"/integrations/{self.channel.code}/checks/"
 
         self.client.login(username="alice@example.org", password="password")
         r = self.client.get(url)
@@ -22,7 +22,7 @@ class ChannelChecksTestCase(BaseTestCase):
         self.assertContains(r, "Assign Checks to Integration", status_code=200)
 
     def test_team_access_works(self):
-        url = "/integrations/%s/checks/" % self.channel.code
+        url = f"/integrations/{self.channel.code}/checks/"
 
         # Logging in as bob, not alice. Bob has team access so this
         # should work.
@@ -33,7 +33,7 @@ class ChannelChecksTestCase(BaseTestCase):
     def test_it_checks_owner(self):
         # channel does not belong to mallory so this should come back
         # with 403 Forbidden:
-        url = "/integrations/%s/checks/" % self.channel.code
+        url = f"/integrations/{self.channel.code}/checks/"
         self.client.login(username="charlie@example.org", password="password")
         r = self.client.get(url)
         self.assertEqual(r.status_code, 404)

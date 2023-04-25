@@ -124,14 +124,10 @@ def _check_2fa(request, user):
         # - timestamp, to limit the max time between the auth steps
         request.session["2fa_user"] = [user.id, user.email, int(time.time())]
 
-        if have_keys:
-            path = reverse("hc-login-webauthn")
-        else:
-            path = reverse("hc-login-totp")
-
+        path = reverse("hc-login-webauthn") if have_keys else reverse("hc-login-totp")
         redirect_url = request.GET.get("next")
         if _allow_redirect(redirect_url):
-            path += "?next=%s" % redirect_url
+            path += f"?next={redirect_url}"
 
         return redirect(path)
 
@@ -671,17 +667,19 @@ def unsubscribe_reports(request, signed_username):
 def close(request):
     user = request.user
 
-    if request.method == "POST":
-        if request.POST.get("confirmation") == request.user.email:
-            # Cancel their subscription:
-            if sub := Subscription.objects.filter(user=user).first():
-                sub.cancel()
+    if (
+        request.method == "POST"
+        and request.POST.get("confirmation") == request.user.email
+    ):
+        # Cancel their subscription:
+        if sub := Subscription.objects.filter(user=user).first():
+            sub.cancel()
 
-            # Deleting user also deletes its profile, checks, channels etc.
-            user.delete()
+        # Deleting user also deletes its profile, checks, channels etc.
+        user.delete()
 
-            request.session.flush()
-            return redirect("hc-login")
+        request.session.flush()
+        return redirect("hc-login")
 
     ctx = {}
     if "confirmation" in request.POST:
@@ -848,7 +846,7 @@ def login_webauthn(request):
         totp_url = reverse("hc-login-totp")
         redirect_url = request.GET.get("next")
         if _allow_redirect(redirect_url):
-            totp_url += "?next=%s" % redirect_url
+            totp_url += f"?next={redirect_url}"
 
     ctx = {
         "options": options,

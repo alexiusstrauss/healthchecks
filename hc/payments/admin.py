@@ -41,7 +41,7 @@ class SubsAdmin(admin.ModelAdmin):
     def profile(self, obj):
         if obj.user.profile:
             url = reverse("admin:accounts_profile_change", args=[obj.user.profile.id])
-            return "<a href='%s'>View Profile</a>" % url
+            return f"<a href='{url}'>View Profile</a>"
 
         return ""
 

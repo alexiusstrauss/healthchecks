@@ -33,7 +33,7 @@ class MockSocket(object):
         self.outbox += message.encode()
 
     def recv(self, nbytes):
-        head, self.outbox = self.outbox[0:1], self.outbox[1:]
+        head, self.outbox = self.outbox[:1], self.outbox[1:]
         return head
 
 

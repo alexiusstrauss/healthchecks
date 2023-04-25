@@ -15,7 +15,7 @@ else:
 class Unit(object):
     def __init__(self, name, nsecs):
         self.name = name
-        self.plural = name + "s"
+        self.plural = f"{name}s"
         self.nsecs = nsecs
 
 
@@ -38,7 +38,7 @@ def format_duration(td):
 
         v, remaining_seconds = divmod(remaining_seconds, unit.nsecs)
         if v == 1:
-            result.append("1 %s" % unit.name)
+            result.append(f"1 {unit.name}")
         elif v > 1:
             result.append("%d %s" % (v, unit.plural))
 
@@ -62,7 +62,7 @@ def format_hms(td):
     if h or mins:
         result.append("%d min" % mins)
 
-    result.append("%s sec" % secs)
+    result.append(f"{secs} sec")
 
     return " ".join(result)
 
@@ -72,11 +72,7 @@ def format_approx_duration(td):
     for unit in (DAY, HOUR, MINUTE, SECOND):
         if v >= unit.nsecs:
             vv = v // unit.nsecs
-            if vv == 1:
-                return "1 %s" % unit.name
-            else:
-                return "%d %s" % (vv, unit.plural)
-
+            return f"1 {unit.name}" if vv == 1 else "%d %s" % (vv, unit.plural)
     return ""
 
 
@@ -86,7 +82,7 @@ def month_boundaries(months: int, tzstr: str) -> list[datetime]:
 
     now = timezone.now().astimezone(tz)
     y, m = now.year, now.month
-    for x in range(0, months):
+    for _ in range(months):
         result.insert(0, datetime(y, m, 1, tzinfo=tz))
 
         m -= 1
@@ -103,7 +99,7 @@ def week_boundaries(weeks: int, tzstr: str) -> list[datetime]:
 
     today = timezone.now().astimezone(tz).date()
     needle = today - td(days=today.weekday())
-    for x in range(0, weeks):
+    for _ in range(weeks):
         result.insert(0, datetime(needle.year, needle.month, needle.day, tzinfo=tz))
         needle -= td(days=7)
 

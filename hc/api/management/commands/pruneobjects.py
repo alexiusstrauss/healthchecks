@@ -29,10 +29,9 @@ class Command(BaseCommand):
 
         print("Staged for deletion: %d" % len(delete_list))
         for prefix in delete_list:
-            print("Deleting %s" % prefix)
+            print(f"Deleting {prefix}")
             q = c.list_objects(settings.S3_BUCKET, prefix)
-            delete_objs = [DeleteObject(obj.object_name) for obj in q]
-            if delete_objs:
+            if delete_objs := [DeleteObject(obj.object_name) for obj in q]:
                 errors = c.remove_objects(settings.S3_BUCKET, delete_objs)
                 for e in errors:
                     print("remove_objects error: ", e)

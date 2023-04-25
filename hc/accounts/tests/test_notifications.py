@@ -12,9 +12,7 @@ class NotificationsTestCase(BaseTestCase):
     url = "/accounts/profile/notifications/"
 
     def _payload(self, **kwargs):
-        result = {"reports": "monthly", "nag_period": "0", "tz": "Europe/Riga"}
-        result.update(kwargs)
-        return result
+        return {"reports": "monthly", "nag_period": "0", "tz": "Europe/Riga"} | kwargs
 
     def test_it_saves_reports_monthly(self):
         self.profile.reports = "off"

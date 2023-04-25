@@ -147,9 +147,9 @@ def down_title(check):
 
     """
 
-    s = "%s – %s" % (check.name_then_code(), settings.SITE_NAME)
+    s = f"{check.name_then_code()} – {settings.SITE_NAME}"
     if check.get_status() == "down":
-        s = "DOWN – " + s
+        s = f"DOWN – {s}"
 
     return s
 
@@ -173,7 +173,7 @@ def fix_asterisks(s):
 
 @register.filter
 def format_headers(headers):
-    return "\n".join("%s: %s" % (k, v) for k, v in headers.items())
+    return "\n".join(f"{k}: {v}" for k, v in headers.items())
 
 
 @register.simple_tag
@@ -252,7 +252,4 @@ def add6days(dt):
 
 @register.filter
 def mask_phone(phone):
-    if len(phone) > 7:
-        return phone[:4] + "******" + phone[-3:]
-
-    return phone
+    return f"{phone[:4]}******{phone[-3:]}" if len(phone) > 7 else phone

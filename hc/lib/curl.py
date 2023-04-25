@@ -103,10 +103,12 @@ def request(method: str, url: str, **kwargs) -> Response:
 
     def opensocket(purpose, curl_address):
         family, socktype, protocol, address = curl_address
-        if not settings.INTEGRATIONS_ALLOW_PRIVATE_IPS:
-            if ipaddress.ip_address(address[0]).is_private:
-                opensocket_rejected_ips.append(address[0])
-                return pycurl.SOCKET_BAD
+        if (
+            not settings.INTEGRATIONS_ALLOW_PRIVATE_IPS
+            and ipaddress.ip_address(address[0]).is_private
+        ):
+            opensocket_rejected_ips.append(address[0])
+            return pycurl.SOCKET_BAD
 
         return socket.socket(family, socktype, protocol)
 
@@ -139,7 +141,7 @@ def request(method: str, url: str, **kwargs) -> Response:
     headers_list = [_makeheader(k, v) for k, v in headers.items()]
     c.setopt(pycurl.HTTPHEADER, headers_list)
 
-    if method in ("post", "put"):
+    if method in {"post", "put"}:
         if isinstance(data, dict):
             c.setopt(pycurl.POSTFIELDS, urlencode(data))
 

@@ -23,7 +23,7 @@ class LogTestCase(BaseTestCase):
         self.ping.created = "2000-01-01T00:00:00+00:00"
         self.ping.save()
 
-        self.url = "/checks/%s/log/" % self.check.code
+        self.url = f"/checks/{self.check.code}/log/"
 
     def test_it_works(self):
         self.client.login(username="alice@example.org", password="password")

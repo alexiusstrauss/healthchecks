@@ -15,8 +15,8 @@ class UpdateTimeoutTestCase(BaseTestCase):
         self.check.last_ping = timezone.now()
         self.check.save()
 
-        self.url = "/checks/%s/timeout/" % self.check.code
-        self.redirect_url = "/projects/%s/checks/" % self.project.code
+        self.url = f"/checks/{self.check.code}/timeout/"
+        self.redirect_url = f"/projects/{self.project.code}/checks/"
 
     def test_it_works(self):
         payload = {"kind": "simple", "timeout": 3600, "grace": 60}
@@ -35,7 +35,7 @@ class UpdateTimeoutTestCase(BaseTestCase):
         self.assertEqual(self.check.alert_after, expected_aa)
 
     def test_redirect_preserves_querystring(self):
-        referer = self.redirect_url + "?tag=foo"
+        referer = f"{self.redirect_url}?tag=foo"
         payload = {"kind": "simple", "timeout": 3600, "grace": 60}
 
         self.client.login(username="alice@example.org", password="password")

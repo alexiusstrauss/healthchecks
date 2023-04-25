@@ -137,7 +137,7 @@ class DowntimeSummary(object):
         self.counts = [0 for _ in boundaries]
 
     def add(self, when: datetime, duration: td) -> None:
-        for i in range(0, len(self.boundaries)):
+        for i in range(len(self.boundaries)):
             if when >= self.boundaries[i]:
                 self.durations[i] += duration
                 self.counts[i] += 1
@@ -193,10 +193,7 @@ class Check(models.Model):
         return "%s (%d)" % (self.name or self.code, self.id)
 
     def name_then_code(self) -> str:
-        if self.name:
-            return self.name
-
-        return str(self.code)
+        return self.name if self.name else str(self.code)
 
     def url(self) -> str | None:
         """Return check's ping url in user's preferred style.
@@ -223,7 +220,7 @@ class Check(models.Model):
         return settings.SITE_ROOT + reverse("hc-uncloak", args=[self.unique_key])
 
     def email(self) -> str:
-        return "%s@%s" % (self.code, settings.PING_EMAIL_DOMAIN)
+        return f"{self.code}@{settings.PING_EMAIL_DOMAIN}"
 
     def clamped_last_duration(self) -> td | None:
         if self.last_duration and self.last_duration < MAX_DURATION:
@@ -266,10 +263,7 @@ class Check(models.Model):
         If the check is already down, also return None.
         """
         grace_start = self.get_grace_start()
-        if grace_start is not None:
-            return grace_start + self.grace
-
-        return None
+        return grace_start + self.grace if grace_start is not None else None
 
     def get_status(self, *, with_started: bool = False) -> str:
         """Return current status for display."""
@@ -290,10 +284,7 @@ class Check(models.Model):
         if frozen_now >= grace_end:
             return "down"
 
-        if frozen_now >= grace_start:
-            return "grace"
-
-        return "up"
+        return "grace" if frozen_now >= grace_start else "up"
 
     def assign_all_channels(self) -> None:
         channels = Channel.objects.filter(project=self.project)
@@ -356,10 +347,10 @@ class Check(models.Model):
 
             # Optimization: construct API URLs manually instead of using reverse().
             # This is significantly quicker when returning hundreds of checks.
-            update_url = settings.SITE_ROOT + f"/api/v{v}/checks/{self.code}"
+            update_url = f"{settings.SITE_ROOT}/api/v{v}/checks/{self.code}"
             result["update_url"] = update_url
-            result["pause_url"] = update_url + "/pause"
-            result["resume_url"] = update_url + "/resume"
+            result["pause_url"] = f"{update_url}/pause"
+            result["resume_url"] = f"{update_url}/resume"
             result["channels"] = self.channels_str()
 
         if self.kind == "simple":
@@ -391,14 +382,11 @@ class Check(models.Model):
             if self.status == "paused" and self.manual_resume:
                 action = "ign"
 
-            if action == "start":
+            if action in {"ign", "log"}:
+                pass
+            elif action == "start":
                 self.last_start = frozen_now
                 self.last_start_rid = rid
-                # Don't update "last_ping" field.
-            elif action == "ign":
-                pass
-            elif action == "log":
-                pass
             else:
                 self.last_ping = frozen_now
                 self.last_duration = None
@@ -428,7 +416,7 @@ class Check(models.Model):
             ping = Ping(owner=self)
             ping.n = self.n_pings
             ping.created = frozen_now
-            if action in ("start", "fail", "ign", "log"):
+            if action in {"start", "fail", "ign", "log"}:
                 ping.kind = action
 
             ping.remote_addr = remote_addr
@@ -492,9 +480,7 @@ class Check(models.Model):
         # A list of flips and time interval boundaries
         events = [(b, "---") for b in boundaries]
         q = self.flip_set.filter(created__gt=min(boundaries))
-        for pair in q.values_list("created", "old_status"):
-            events.append(pair)
-
+        events.extend(iter(q.values_list("created", "old_status")))
         # Iterate through flips and boundaries,
         # and for each "down" event increase the counters in `totals`.
         dt, status = now(), self.status
@@ -600,24 +586,17 @@ class Ping(models.Model):
         return result
 
     def has_body(self) -> bool:
-        if self.body or self.body_raw or self.object_size:
-            return True
-
-        return False
+        return bool(self.body or self.body_raw or self.object_size)
 
     def get_body_bytes(self) -> bytes | None:
         if self.body:
             return self.body.encode()
         if self.object_size:
             return get_object(self.owner.code, self.n)
-        if self.body_raw:
-            return self.body_raw
-
-        return None
+        return self.body_raw if self.body_raw else None
 
     def get_body(self) -> str | None:
-        body_bytes = self.get_body_bytes()
-        if body_bytes:
+        if body_bytes := self.get_body_bytes():
             return bytes(body_bytes).decode(errors="replace")
 
         return None
@@ -668,18 +647,18 @@ class Channel(models.Model):
         if self.name:
             return self.name
         if self.kind == "email":
-            return "Email to %s" % self.email_value
-        elif self.kind == "sms":
-            return "SMS to %s" % self.phone_number
+            return f"Email to {self.email_value}"
         elif self.kind == "slack":
-            return "Slack %s" % self.slack_channel
+            return f"Slack {self.slack_channel}"
+        elif self.kind == "sms":
+            return f"SMS to {self.phone_number}"
         elif self.kind == "telegram":
-            return "Telegram %s" % self.telegram_name
+            return f"Telegram {self.telegram_name}"
         elif self.kind == "zulip":
             if self.zulip_type == "stream":
-                return "Zulip stream %s" % self.zulip_to
+                return f"Zulip stream {self.zulip_to}"
             if self.zulip_type == "private":
-                return "Zulip user %s" % self.zulip_to
+                return f"Zulip user {self.zulip_to}"
 
         return self.get_kind_display()
 
@@ -694,7 +673,7 @@ class Channel(models.Model):
         self.checks.add(*checks)
 
     def make_token(self):
-        seed = "%s%s" % (self.code, settings.SECRET_KEY)
+        seed = f"{self.code}{settings.SECRET_KEY}"
         seed = seed.encode()
         return hashlib.sha1(seed).hexdigest()
 
@@ -794,18 +773,14 @@ class Channel(models.Model):
         elif self.kind in ("hipchat", "pagerteam"):
             return transports.RemovedTransport(self)
 
-        raise NotImplementedError("Unknown channel kind: %s" % self.kind)
+        raise NotImplementedError(f"Unknown channel kind: {self.kind}")
 
     def notify(self, check, is_test=False):
         if self.transport.is_noop(check):
             return "no-op"
 
         n = Notification(channel=self)
-        if is_test:
-            # When sending a test notification we leave the owner field null.
-            # (the passed check is a dummy, unsaved Check instance)
-            pass
-        else:
+        if not is_test:
             n.owner = check
 
         n.check_status = check.status
@@ -827,7 +802,7 @@ class Channel(models.Model):
         return error
 
     def icon_path(self):
-        return "img/integrations/%s.png" % self.kind
+        return f"img/integrations/{self.kind}.png"
 
     @property
     def json(self):
@@ -917,7 +892,7 @@ class Channel(models.Model):
         # Discord migrated to discord.com,
         # and is dropping support for discordapp.com on 7 November 2020
         if url.startswith("https://discordapp.com/"):
-            url = "https://discord.com/" + url[23:]
+            url = f"https://discord.com/{url[23:]}"
 
         return url
 
@@ -945,10 +920,7 @@ class Channel(models.Model):
     @property
     def pd_service_key(self):
         assert self.kind == "pd"
-        if not self.value.startswith("{"):
-            return self.value
-
-        return self.json["service_key"]
+        return self.json["service_key"] if self.value.startswith("{") else self.value
 
     @property
     def pd_account(self):
@@ -959,10 +931,7 @@ class Channel(models.Model):
     @property
     def phone_number(self):
         assert self.kind in ("call", "sms", "whatsapp", "signal")
-        if self.value.startswith("{"):
-            return self.json["value"]
-
-        return self.value
+        return self.json["value"] if self.value.startswith("{") else self.value
 
     trello_token = json_property("trello", "token")
     trello_list_id = json_property("trello", "list_id")
@@ -976,26 +945,17 @@ class Channel(models.Model):
     @property
     def email_value(self):
         assert self.kind == "email"
-        if not self.value.startswith("{"):
-            return self.value
-
-        return self.json["value"]
+        return self.json["value"] if self.value.startswith("{") else self.value
 
     @property
     def email_notify_up(self):
         assert self.kind == "email"
-        if not self.value.startswith("{"):
-            return True
-
-        return self.json.get("up")
+        return self.json.get("up") if self.value.startswith("{") else True
 
     @property
     def email_notify_down(self):
         assert self.kind == "email"
-        if not self.value.startswith("{"):
-            return True
-
-        return self.json.get("down")
+        return self.json.get("down") if self.value.startswith("{") else True
 
     whatsapp_notify_up = json_property("whatsapp", "up")
     whatsapp_notify_down = json_property("whatsapp", "down")
@@ -1016,18 +976,12 @@ class Channel(models.Model):
     @property
     def opsgenie_key(self):
         assert self.kind == "opsgenie"
-        if not self.value.startswith("{"):
-            return self.value
-
-        return self.json["key"]
+        return self.json["key"] if self.value.startswith("{") else self.value
 
     @property
     def opsgenie_region(self):
         assert self.kind == "opsgenie"
-        if not self.value.startswith("{"):
-            return "us"
-
-        return self.json["region"]
+        return self.json["region"] if self.value.startswith("{") else "us"
 
     zulip_bot_email = json_property("zulip", "bot_email")
     zulip_api_key = json_property("zulip", "api_key")
@@ -1044,7 +998,7 @@ class Channel(models.Model):
         # Fallback if we don't have the site value:
         # derive it from bot's email
         _, domain = doc["bot_email"].split("@")
-        return "https://" + domain
+        return f"https://{domain}"
 
     @property
     def zulip_topic(self):
@@ -1123,7 +1077,7 @@ class Flip(models.Model):
             return
 
         if self.new_status not in ("up", "down"):
-            raise NotImplementedError("Unexpected status: %s" % self.status)
+            raise NotImplementedError(f"Unexpected status: {self.status}")
 
         for channel in self.owner.channel_set.exclude(disabled=True):
             start = time.time()
@@ -1182,10 +1136,10 @@ class TokenBucket(models.Model):
         mailbox, domain = email.split("@")
         mailbox = mailbox.replace(".", "")
         mailbox = mailbox.split("+")[0]
-        email = mailbox + "@" + domain
+        email = f"{mailbox}@{domain}"
 
         salted_encoded = (email + settings.SECRET_KEY).encode()
-        value = "em-%s" % hashlib.sha1(salted_encoded).hexdigest()
+        value = f"em-{hashlib.sha1(salted_encoded).hexdigest()}"
 
         # 20 login attempts for a single email per hour:
         return TokenBucket.authorize(value, 20, 3600)
@@ -1200,14 +1154,14 @@ class TokenBucket(models.Model):
     @staticmethod
     def authorize_login_password(email):
         salted_encoded = (email + settings.SECRET_KEY).encode()
-        value = "pw-%s" % hashlib.sha1(salted_encoded).hexdigest()
+        value = f"pw-{hashlib.sha1(salted_encoded).hexdigest()}"
 
         # 20 password attempts per day
         return TokenBucket.authorize(value, 20, 3600 * 24)
 
     @staticmethod
     def authorize_telegram(telegram_id):
-        value = "tg-%s" % telegram_id
+        value = f"tg-{telegram_id}"
 
         # 6 messages for a single chat per minute:
         return TokenBucket.authorize(value, 6, 60)
@@ -1215,7 +1169,7 @@ class TokenBucket(models.Model):
     @staticmethod
     def authorize_signal(phone):
         salted_encoded = (phone + settings.SECRET_KEY).encode()
-        value = "signal-%s" % hashlib.sha1(salted_encoded).hexdigest()
+        value = f"signal-{hashlib.sha1(salted_encoded).hexdigest()}"
 
         # 6 messages for a single recipient per minute:
         return TokenBucket.authorize(value, 6, 60)
@@ -1230,7 +1184,7 @@ class TokenBucket(models.Model):
     @staticmethod
     def authorize_pushover(user_key):
         salted_encoded = (user_key + settings.SECRET_KEY).encode()
-        value = "po-%s" % hashlib.sha1(salted_encoded).hexdigest()
+        value = f"po-{hashlib.sha1(salted_encoded).hexdigest()}"
         # 6 messages for a single user key per minute:
         return TokenBucket.authorize(value, 6, 60)
 

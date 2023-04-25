@@ -28,7 +28,7 @@ except ImportError:
 
 
 def tmpl(template_name, **ctx) -> str:
-    template_path = "integrations/%s" % template_name
+    template_path = f"integrations/{template_name}"
     # \xa0 is non-breaking space. It causes SMS messages to use UCS2 encoding
     # and cost twice the money.
     return render_to_string(template_path, ctx).strip().replace("\xa0", " ")
@@ -138,7 +138,7 @@ class Email(Transport):
         unsub_link = self.channel.get_unsub_link()
 
         headers = {
-            "List-Unsubscribe": "<%s>" % unsub_link,
+            "List-Unsubscribe": f"<{unsub_link}>",
             "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
         }
 
@@ -195,10 +195,7 @@ class Shell(Transport):
         if check.status == "down" and not self.channel.cmd_down:
             return True
 
-        if check.status == "up" and not self.channel.cmd_up:
-            return True
-
-        return False
+        return check.status == "up" and not self.channel.cmd_up
 
     def notify(self, check, notification=None) -> None:
         if not settings.SHELL_ENABLED:
@@ -300,10 +297,7 @@ class Webhook(HttpTransport):
         if check.status == "down" and not self.channel.url_down:
             return True
 
-        if check.status == "up" and not self.channel.url_up:
-            return True
-
-        return False
+        return check.status == "up" and not self.channel.url_up
 
     def notify(self, check, notification=None) -> None:
         if not settings.WEBHOOKS_ENABLED:
@@ -314,20 +308,15 @@ class Webhook(HttpTransport):
             raise TransportError("Empty webhook URL")
 
         url = self.prepare(spec["url"], check, urlencode=True)
-        headers = {}
-        for key, value in spec["headers"].items():
-            # Header values should contain ASCII and latin-1 only
-            headers[key] = self.prepare(value, check, latin1=True)
-
+        headers = {
+            key: self.prepare(value, check, latin1=True)
+            for key, value in spec["headers"].items()
+        }
         body = spec["body"]
         if body:
             body = self.prepare(body, check, allow_ping_body=True).encode()
 
-        # When sending a test notification, don't retry on failures.
-        use_retries = True
-        if notification and notification.owner is None:
-            use_retries = False  # this is a test notification
-
+        use_retries = not notification or notification.owner is not None
         if spec["method"] == "GET":
             self.get(url, use_retries=use_retries, headers=headers)
         elif spec["method"] == "POST":
@@ -402,7 +391,7 @@ class Opsgenie(HttpTransport):
 
         headers = {
             "Conent-Type": "application/json",
-            "Authorization": "GenieKey %s" % self.channel.opsgenie_key,
+            "Authorization": f"GenieKey {self.channel.opsgenie_key}",
         }
 
         payload = {"alias": str(check.code), "source": settings.SITE_NAME}
@@ -418,7 +407,7 @@ class Opsgenie(HttpTransport):
             url = "https://api.eu.opsgenie.com/v2/alerts"
 
         if check.status == "up":
-            url += "/%s/close?identifierType=alias" % check.code
+            url += f"/{check.code}/close?identifierType=alias"
 
         self.post(url, json=payload, headers=headers)
 
@@ -508,11 +497,7 @@ class Pushover(HttpTransport):
         pieces = self.channel.value.split("|")
         user_key, down_prio = pieces[0], pieces[1]
 
-        # The third element, if present, is the priority for "up" events
-        up_prio = down_prio
-        if len(pieces) == 3:
-            up_prio = pieces[2]
-
+        up_prio = pieces[2] if len(pieces) == 3 else down_prio
         from hc.api.models import TokenBucket
 
         if not TokenBucket.authorize_pushover(user_key):
@@ -571,7 +556,7 @@ class Matrix(HttpTransport):
         s = quote(self.channel.value)
 
         url = settings.MATRIX_HOMESERVER
-        url += "/_matrix/client/r0/rooms/%s/send/m.room.message?" % s
+        url += f"/_matrix/client/r0/rooms/{s}/send/m.room.message?"
         url += urlencode({"access_token": settings.MATRIX_ACCESS_TOKEN})
         return url
 
@@ -592,7 +577,7 @@ class Discord(HttpTransport):
     def notify(self, check, notification=None) -> None:
         text = tmpl("slack_message.json", check=check, ping=self.last_ping(check))
         payload = json.loads(text)
-        url = self.channel.discord_webhook_url + "/slack"
+        url = f"{self.channel.discord_webhook_url}/slack"
         self.post(url, json=payload)
 
 
@@ -746,8 +731,8 @@ class WhatsApp(HttpTransport):
         text = tmpl("whatsapp_message.html", check=check, site_name=settings.SITE_NAME)
 
         data = {
-            "From": "whatsapp:%s" % settings.TWILIO_FROM,
-            "To": "whatsapp:%s" % self.channel.phone_number,
+            "From": f"whatsapp:{settings.TWILIO_FROM}",
+            "To": f"whatsapp:{self.channel.phone_number}",
             "Body": text,
         }
 
@@ -854,7 +839,7 @@ class Zulip(HttpTransport):
         if not topic:
             topic = tmpl("zulip_topic.html", check=check)
 
-        url = self.channel.zulip_site + "/api/v1/messages"
+        url = f"{self.channel.zulip_site}/api/v1/messages"
         auth = (self.channel.zulip_bot_email, self.channel.zulip_api_key)
         data = {
             "type": self.channel.zulip_type,
@@ -889,7 +874,7 @@ class LineNotify(HttpTransport):
     def notify(self, check, notification=None) -> None:
         headers = {
             "Content-Type": "application/x-www-form-urlencoded",
-            "Authorization": "Bearer %s" % self.channel.linenotify_token,
+            "Authorization": f"Bearer {self.channel.linenotify_token}",
         }
         payload = {"message": tmpl("linenotify_message.html", check=check)}
         self.post(self.URL, headers=headers, params=payload)
@@ -937,7 +922,7 @@ class Signal(Transport):
                         raise TransportError("CAPTCHA proof required")
 
                 code = reply["error"].get("code")
-                raise TransportError("signal-cli call failed (%s)" % code)
+                raise TransportError(f"signal-cli call failed ({code})")
 
     def _read_replies(self, payload_bytes: bytes):
         """Send a request to signal-cli over UNIX socket. Read and yield replies.
@@ -985,7 +970,7 @@ class Signal(Transport):
                         raise TransportError("signal-cli call timed out")
 
             except OSError as e:
-                msg = "signal-cli call failed (%s)" % e
+                msg = f"signal-cli call failed ({e})"
                 # Log the exception, so any configured logging handlers can pick it up
                 logging.getLogger(__name__).exception(msg)
 

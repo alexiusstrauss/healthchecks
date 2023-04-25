@@ -27,7 +27,7 @@ class AddDiscordCompleteTestCase(BaseTestCase):
         mock_post.return_value.text = json.dumps(oauth_response)
         mock_post.return_value.json.return_value = oauth_response
 
-        url = self.url + "?code=12345678&state=foo"
+        url = f"{self.url}?code=12345678&state=foo"
 
         self.client.login(username="alice@example.org", password="password")
         r = self.client.get(url, follow=True)
@@ -46,7 +46,7 @@ class AddDiscordCompleteTestCase(BaseTestCase):
         session["add_discord"] = ("foo", str(self.project.code))
         session.save()
 
-        url = self.url + "?code=12345678&state=bar"
+        url = f"{self.url}?code=12345678&state=bar"
 
         self.client.login(username="alice@example.org", password="password")
         r = self.client.get(url)
@@ -60,7 +60,7 @@ class AddDiscordCompleteTestCase(BaseTestCase):
         session["add_discord"] = ("foo", str(self.project.code))
         session.save()
 
-        url = self.url + "?error=access_denied"
+        url = f"{self.url}?error=access_denied"
 
         self.client.login(username="alice@example.org", password="password")
         r = self.client.get(url, follow=True)
@@ -75,7 +75,7 @@ class AddDiscordCompleteTestCase(BaseTestCase):
     @override_settings(DISCORD_CLIENT_ID=None)
     def test_it_requires_client_id(self):
         self.client.login(username="alice@example.org", password="password")
-        r = self.client.get(self.url + "?code=12345678&state=bar")
+        r = self.client.get(f"{self.url}?code=12345678&state=bar")
         self.assertEqual(r.status_code, 404)
 
     def test_it_requires_rw_access(self):
@@ -87,5 +87,5 @@ class AddDiscordCompleteTestCase(BaseTestCase):
         self.bobs_membership.save()
 
         self.client.login(username="bob@example.org", password="password")
-        r = self.client.get(self.url + "?code=12345678&state=foo")
+        r = self.client.get(f"{self.url}?code=12345678&state=foo")
         self.assertEqual(r.status_code, 403)

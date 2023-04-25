@@ -61,13 +61,13 @@ class LoginTestCase(BaseTestCase):
     def test_it_sends_link_with_next(self):
         form = {"identity": "alice@example.org"}
 
-        r = self.client.post("/accounts/login/?next=" + self.channels_url, form)
+        r = self.client.post(f"/accounts/login/?next={self.channels_url}", form)
         self.assertRedirects(r, "/accounts/login_link_sent/")
 
         # The check_token link should have a ?next= query parameter:
         self.assertEqual(len(mail.outbox), 1)
         body = mail.outbox[0].body
-        self.assertTrue("/?next=" + self.channels_url in body)
+        self.assertTrue(f"/?next={self.channels_url}" in body)
 
     def test_it_handles_unknown_email(self):
         form = {"identity": "surprise@example.org"}
@@ -158,10 +158,10 @@ class LoginTestCase(BaseTestCase):
 
         form = {"action": "login", "email": "alice@example.org", "password": "password"}
 
-        samples = [self.channels_url, "/checks/%s/details/" % check.code]
+        samples = [self.channels_url, f"/checks/{check.code}/details/"]
 
         for s in samples:
-            r = self.client.post("/accounts/login/?next=%s" % s, form)
+            r = self.client.post(f"/accounts/login/?next={s}", form)
             self.assertRedirects(r, s)
 
     def test_it_handles_bad_next_parameter(self):
@@ -173,7 +173,7 @@ class LoginTestCase(BaseTestCase):
         ]
 
         for sample in samples:
-            r = self.client.post("/accounts/login/?next=" + sample, form)
+            r = self.client.post(f"/accounts/login/?next={sample}", form)
             self.assertRedirects(r, self.checks_url)
 
     def test_it_handles_wrong_password(self):

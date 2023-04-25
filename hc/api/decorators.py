@@ -89,7 +89,7 @@ def validate_json(schema={"type": "object"}):
             try:
                 validate(request.json, schema)
             except ValidationError as e:
-                return error("json validation error: %s" % e)
+                return error(f"json validation error: {e}")
 
             return f(request, *args, **kwds)
 

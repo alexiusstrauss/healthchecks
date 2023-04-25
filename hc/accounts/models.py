@@ -89,7 +89,7 @@ class Profile(models.Model):
     objects = ProfileManager()
 
     def __str__(self):
-        return "Profile for %s" % self.user.email
+        return f"Profile for {self.user.email}"
 
     def notifications_url(self):
         return settings.SITE_ROOT + reverse("hc-notifications")
@@ -120,7 +120,7 @@ class Profile(models.Model):
         token = self.prepare_token()
         path = reverse("hc-check-token", args=[self.user.username, token])
         if redirect_url:
-            path += "?next=%s" % redirect_url
+            path += f"?next={redirect_url}"
 
         ctx = {
             "button_text": "Sign In",
@@ -148,7 +148,7 @@ class Profile(models.Model):
         token = self.prepare_token()
         settings_path = reverse("hc-project-settings", args=[project.code])
         path = reverse("hc-check-token", args=[self.user.username, token])
-        path += "?next=%s" % settings_path
+        path += f"?next={settings_path}"
 
         ctx = {
             "button_text": "Project Settings",
@@ -213,7 +213,7 @@ class Profile(models.Model):
         unsub_url = self.reports_unsub_url()
 
         headers = {
-            "List-Unsubscribe": "<%s>" % unsub_url,
+            "List-Unsubscribe": f"<{unsub_url}>",
             "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
         }
 
@@ -250,10 +250,7 @@ class Profile(models.Model):
             return 0
 
         # If last sent date is not from this month, we've sent 0 this month.
-        if month(now()) > month(self.last_sms_date):
-            return 0
-
-        return self.sms_sent
+        return 0 if month(now()) > month(self.last_sms_date) else self.sms_sent
 
     def authorize_sms(self):
         """If monthly limit not exceeded, increase counter and return True"""
@@ -273,10 +270,7 @@ class Profile(models.Model):
             return 0
 
         # If last sent date is not from this month, we've made 0 calls this month.
-        if month(now()) > month(self.last_call_date):
-            return 0
-
-        return self.calls_sent
+        return 0 if month(now()) > month(self.last_call_date) else self.calls_sent
 
     def authorize_call(self):
         """If monthly limit not exceeded, increase counter and return True"""
@@ -391,22 +385,13 @@ class Project(models.Model):
             profile.update_next_nag_date()
 
     def get_n_down(self):
-        result = 0
-        for check in self.check_set.all():
-            if check.get_status() == "down":
-                result += 1
-
-        return result
+        return sum(check.get_status() == "down" for check in self.check_set.all())
 
     def have_channel_issues(self):
         errors = list(self.channel_set.values_list("last_error", flat=True))
 
         # It's a problem if a project has no integrations at all
-        if len(errors) == 0:
-            return True
-
-        # It's a problem if any integration has a logged error
-        return True if max(errors) else False
+        return bool(max(errors)) if errors else True
 
     def transfer_request(self):
         return self.member_set.filter(transfer_request_date__isnull=False).first()

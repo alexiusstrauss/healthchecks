@@ -56,7 +56,7 @@ class ChecksAdmin(admin.ModelAdmin):
 
         s = f'<a href="{url}"">{name}</a>'
         for tag in obj.tags_list():
-            s += " <span>%s</span>" % escape(tag)
+            s += f" <span>{escape(tag)}</span>"
 
         return s
 
@@ -143,13 +143,8 @@ class LargeTablePaginator(Paginator):
         Returns the total number of objects, across all pages.
         """
         try:
-            estimate = 0
-            if not self.object_list.query.where:
-                estimate = self._get_estimate()
-            if estimate < 10000:
-                return self.object_list.count()
-            else:
-                return estimate
+            estimate = 0 if self.object_list.query.where else self._get_estimate()
+            return self.object_list.count() if estimate < 10000 else estimate
         except (AttributeError, TypeError):
             # AttributeError if object_list has no count() method.
             # TypeError if object_list.count() requires arguments
@@ -212,14 +207,11 @@ class ChannelsAdmin(admin.ModelAdmin):
 
     @admin.display(description="Value")
     def chopped_value(self, obj):
-        if len(obj.value) > 100:
-            return "%s…" % obj.value[:100]
-
-        return obj.value
+        return f"{obj.value[:100]}…" if len(obj.value) > 100 else obj.value
 
     @admin.display(boolean=True)
     def ok(self, obj):
-        return False if obj.last_error else True
+        return not obj.last_error
 
 
 @admin.register(Notification)
@@ -247,7 +239,7 @@ class NotificationsAdmin(admin.ModelAdmin):
 
     @mark_safe
     def channel_value(self, obj):
-        return "<div>%s</div>" % escape(obj.channel.value)
+        return f"<div>{escape(obj.channel.value)}</div>"
 
     @mark_safe
     def project(self, obj):

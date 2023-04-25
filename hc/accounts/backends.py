@@ -26,10 +26,7 @@ class ProfileBackend(BasicBackend):
         except Profile.DoesNotExist:
             return None
 
-        if not profile.check_token(token):
-            return None
-
-        return profile.user
+        return profile.user if profile.check_token(token) else None
 
 
 class EmailBackend(BasicBackend):

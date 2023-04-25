@@ -85,7 +85,7 @@ class Command(BaseCommand):
             return True
 
         if profile.send_report(nag=True):
-            self.stdout.write("Sent nag to %s" % profile.user.email)
+            self.stdout.write(f"Sent nag to {profile.user.email}")
             # Pause before next report to avoid hitting sending quota
             self.pause()
         else:
@@ -118,7 +118,7 @@ class Command(BaseCommand):
                 break
 
             # Sleep for 60 seconds before looking for more work
-            for i in range(0, 60):
+            for _ in range(60):
                 if not self.shutdown:
                     time.sleep(1)
 

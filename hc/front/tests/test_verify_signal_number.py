@@ -67,7 +67,7 @@ class VerifySignalNumberTestCase(BaseTestCase):
 
     def test_it_requires_authenticated_user(self):
         r = self.client.post(self.url, {"phone": "+1234567890"})
-        self.assertRedirects(r, "/accounts/login/?next=" + self.url)
+        self.assertRedirects(r, f"/accounts/login/?next={self.url}")
 
     def test_it_obeys_per_account_rate_limit(self):
         TokenBucket.objects.create(value=f"signal-verify-{self.alice.id}", tokens=0)

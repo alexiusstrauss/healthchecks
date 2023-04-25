@@ -165,7 +165,7 @@ class PingTestCase(BaseTestCase):
         self.assertTrue(self.check.has_confirmation_link)
 
     def test_fail_endpoint_works(self):
-        r = self.client.get(self.url + "/fail")
+        r = self.client.get(f"{self.url}/fail")
         self.assertEqual(r.status_code, 200)
 
         self.check.refresh_from_db()
@@ -184,7 +184,7 @@ class PingTestCase(BaseTestCase):
         self.check.last_ping = last_ping
         self.check.save()
 
-        r = self.client.get(self.url + "/start")
+        r = self.client.get(f"{self.url}/start")
         self.assertEqual(r.status_code, 200)
 
         self.check.refresh_from_db()
@@ -198,7 +198,7 @@ class PingTestCase(BaseTestCase):
         self.check.status = "paused"
         self.check.save()
 
-        r = self.client.get(self.url + "/start")
+        r = self.client.get(f"{self.url}/start")
         self.assertEqual(r.status_code, 200)
 
         self.check.refresh_from_db()
@@ -207,7 +207,7 @@ class PingTestCase(BaseTestCase):
 
     def test_start_sets_last_start_rid(self):
         rid = uuid4()
-        r = self.client.get(self.url + f"/start?rid={rid}")
+        r = self.client.get(f"{self.url}/start?rid={rid}")
         self.assertEqual(r.status_code, 200)
 
         self.check.refresh_from_db()
@@ -230,7 +230,7 @@ class PingTestCase(BaseTestCase):
         self.check.last_start_rid = uuid4()
         self.check.save()
 
-        r = self.client.get(self.url + f"?rid={uuid4()}")
+        r = self.client.get(f"{self.url}?rid={uuid4()}")
         self.assertEqual(r.status_code, 200)
 
         self.check.refresh_from_db()
@@ -244,7 +244,7 @@ class PingTestCase(BaseTestCase):
         self.check.last_start_rid = uuid4()
         self.check.save()
 
-        r = self.client.get(self.url + f"?rid={self.check.last_start_rid}")
+        r = self.client.get(f"{self.url}?rid={self.check.last_start_rid}")
         self.assertEqual(r.status_code, 200)
 
         self.check.refresh_from_db()
@@ -268,7 +268,7 @@ class PingTestCase(BaseTestCase):
         self.check.last_start_rid = uuid4()
         self.check.save()
 
-        r = self.client.get(self.url + f"/fail?rid={uuid4()}")
+        r = self.client.get(f"{self.url}/fail?rid={uuid4()}")
         self.assertEqual(r.status_code, 200)
 
         self.check.refresh_from_db()
@@ -323,7 +323,7 @@ class PingTestCase(BaseTestCase):
         self.assertEqual(ping.kind, "ign")
 
     def test_zero_exit_status_works(self):
-        r = self.client.get(self.url + "/0")
+        r = self.client.get(f"{self.url}/0")
         self.assertEqual(r.status_code, 200)
 
         self.check.refresh_from_db()
@@ -334,7 +334,7 @@ class PingTestCase(BaseTestCase):
         self.assertEqual(ping.exitstatus, 0)
 
     def test_nonzero_exit_status_works(self):
-        r = self.client.get(self.url + "/123")
+        r = self.client.get(f"{self.url}/123")
         self.assertEqual(r.status_code, 200)
 
         self.check.refresh_from_db()
@@ -345,7 +345,7 @@ class PingTestCase(BaseTestCase):
         self.assertEqual(ping.exitstatus, 123)
 
     def test_it_rejects_exit_status_over_255(self):
-        r = self.client.get(self.url + "/256")
+        r = self.client.get(f"{self.url}/256")
         self.assertEqual(r.status_code, 400)
 
     def test_it_accepts_bad_unicode(self):
@@ -374,7 +374,7 @@ class PingTestCase(BaseTestCase):
         self.assertEqual(data, b"a" * 101)
 
     def test_log_endpoint_works(self):
-        r = self.client.post(self.url + "/log", "hello", content_type="text/plain")
+        r = self.client.post(f"{self.url}/log", "hello", content_type="text/plain")
         self.assertEqual(r.status_code, 200)
 
         self.check.refresh_from_db()
@@ -390,7 +390,7 @@ class PingTestCase(BaseTestCase):
 
     def test_it_saves_run_id(self):
         rid = uuid4()
-        r = self.client.get(self.url + f"/start?rid={rid}")
+        r = self.client.get(f"{self.url}/start?rid={rid}")
         self.assertEqual(r.status_code, 200)
 
         ping = Ping.objects.get()
@@ -399,5 +399,5 @@ class PingTestCase(BaseTestCase):
     def test_it_handles_invalid_rid(self):
         samples = ["12345", "684e2e73-017e-465f-8149-d70b7c5aaa490"]
         for sample in samples:
-            r = self.client.get(self.url + f"/start?rid={sample}")
+            r = self.client.get(f"{self.url}/start?rid={sample}")
             self.assertEqual(r.status_code, 400)

@@ -45,21 +45,21 @@ class PingBySlugTestCase(BaseTestCase):
         assert "no-cache" in r.get("Cache-Control")
 
     def test_fail_endpoint_works(self):
-        r = self.client.get(self.url + "/fail")
+        r = self.client.get(f"{self.url}/fail")
         self.assertEqual(r.status_code, 200)
 
         ping = Ping.objects.get()
         self.assertEqual(ping.kind, "fail")
 
     def test_start_endpoint_works(self):
-        r = self.client.get(self.url + "/start")
+        r = self.client.get(f"{self.url}/start")
         self.assertEqual(r.status_code, 200)
 
         ping = Ping.objects.get()
         self.assertEqual(ping.kind, "start")
 
     def test_zero_exit_status_works(self):
-        r = self.client.get(self.url + "/0")
+        r = self.client.get(f"{self.url}/0")
         self.assertEqual(r.status_code, 200)
 
         ping = Ping.objects.get()
@@ -67,7 +67,7 @@ class PingBySlugTestCase(BaseTestCase):
         self.assertEqual(ping.exitstatus, 0)
 
     def test_nonzero_exit_status_works(self):
-        r = self.client.get(self.url + "/123")
+        r = self.client.get(f"{self.url}/123")
         self.assertEqual(r.status_code, 200)
 
         ping = Ping.objects.get()

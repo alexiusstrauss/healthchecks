@@ -8,11 +8,11 @@ class AddCheckTestCase(BaseTestCase):
     def setUp(self):
         super().setUp()
 
-        self.url = "/projects/%s/checks/add/" % self.project.code
-        self.redirect_url = "/projects/%s/checks/" % self.project.code
+        self.url = f"/projects/{self.project.code}/checks/add/"
+        self.redirect_url = f"/projects/{self.project.code}/checks/"
 
     def _payload(self, **kwargs):
-        payload = {
+        return {
             "name": "Test",
             "tags": "foo bar",
             "kind": "simple",
@@ -20,9 +20,7 @@ class AddCheckTestCase(BaseTestCase):
             "grace": "60",
             "schedule": "* * * * *",
             "tz": "Europe/Riga",
-        }
-        payload.update(kwargs)
-        return payload
+        } | kwargs
 
     def test_it_works(self):
         self.client.login(username="alice@example.org", password="password")
@@ -42,7 +40,7 @@ class AddCheckTestCase(BaseTestCase):
         self.assertRedirects(r, self.redirect_url)
 
     def test_redirect_preserves_querystring(self):
-        referer = self.redirect_url + "?tag=foo"
+        referer = f"{self.redirect_url}?tag=foo"
         self.client.login(username="alice@example.org", password="password")
         r = self.client.post(self.url, self._payload(), HTTP_REFERER=referer)
         self.assertRedirects(r, referer)
