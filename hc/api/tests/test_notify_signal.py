@@ -43,7 +43,7 @@ class MockSocket(object):
         self.outbox += message.encode()
 
     def recv(self, nbytes):
-        head, self.outbox = self.outbox[0:1], self.outbox[1:]
+        head, self.outbox = self.outbox[:1], self.outbox[1:]
         return head
 
 
@@ -188,7 +188,7 @@ class NotifySignalTestCase(BaseTestCase):
     def test_it_does_not_show_more_than_10_other_checks(self, socket):
         socketobj = setup_mock(socket, {})
 
-        for i in range(0, 11):
+        for i in range(11):
             other = Check(project=self.project)
             other.name = f"Foobar #{i}"
             other.status = "down"

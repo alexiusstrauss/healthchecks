@@ -71,7 +71,7 @@ def get_object(code, n):
     if not settings.S3_BUCKET:
         return None
 
-    key = "%s/%s" % (code, enc(n))
+    key = f"{code}/{enc(n)}"
     response = None
     try:
         response = client().get_object(settings.S3_BUCKET, key)
@@ -96,7 +96,7 @@ def get_object(code, n):
 
 
 def put_object(code, n, data):
-    key = "%s/%s" % (code, enc(n))
+    key = f"{code}/{enc(n)}"
     retries = 10
     while True:
         try:
@@ -115,11 +115,10 @@ def _remove_objects(code, upto_n):
     if upto_n <= 0:
         return
 
-    prefix = "%s/" % code
+    prefix = f"{code}/"
     start_after = prefix + enc(upto_n + 1)
     q = client().list_objects(settings.S3_BUCKET, prefix, start_after=start_after)
-    delete_objs = [DeleteObject(obj.object_name) for obj in q]
-    if delete_objs:
+    if delete_objs := [DeleteObject(obj.object_name) for obj in q]:
         num_objs = len(delete_objs)
         try:
             start = time.time()

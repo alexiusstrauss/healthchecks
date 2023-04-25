@@ -31,12 +31,10 @@ def _to_text(message, with_subject, with_body):
     if with_subject:
         chunks.append(message.get("subject", ""))
     if with_body:
-        plain_mime_part = message.get_body(("plain",))
-        if plain_mime_part:
+        if plain_mime_part := message.get_body(("plain",)):
             chunks.append(plain_mime_part.get_content())
 
-        html_mime_part = message.get_body(("html",))
-        if html_mime_part:
+        if html_mime_part := message.get_body(("html",)):
             html = html_mime_part.get_content()
             chunks.append(html2text(html))
 
@@ -70,7 +68,7 @@ def _process_message(remote_addr, mailfrom, mailto, data):
         elif check.start_kw and _match(text, check.start_kw):
             action = "start"
 
-    ua = "Email from %s" % mailfrom
+    ua = f"Email from {mailfrom}"
     check.ping(remote_addr, "email", "", ua, data, action, None)
 
     return f"Processed ping for {code}"

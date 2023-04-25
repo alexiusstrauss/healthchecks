@@ -40,9 +40,9 @@ class LoginWebAuthnTestCase(BaseTestCase):
         self.profile.totp = "0" * 32
         self.profile.save()
 
-        url = self.url + "?next=" + self.channels_url
+        url = f"{self.url}?next={self.channels_url}"
         r = self.client.get(url)
-        self.assertContains(r, "/login/two_factor/totp/?next=" + self.channels_url)
+        self.assertContains(r, f"/login/two_factor/totp/?next={self.channels_url}")
 
     def test_it_requires_unauthenticated_user(self):
         self.client.login(username="alice@example.org", password="password")
@@ -93,7 +93,7 @@ class LoginWebAuthnTestCase(BaseTestCase):
         session["state"] = "dummy-state"
         session.save()
 
-        url = self.url + "?next=" + self.channels_url
+        url = f"{self.url}?next={self.channels_url}"
         r = self.client.post(url, {"response": "dummy response"})
         self.assertRedirects(r, self.channels_url)
 

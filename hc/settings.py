@@ -15,17 +15,14 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 def envbool(s: str, default: str) -> bool:
     v = os.getenv(s, default=default)
     if v not in ("", "True", "False"):
-        msg = "Unexpected value %s=%s, use 'True' or 'False'" % (s, v)
+        msg = f"Unexpected value {s}={v}, use 'True' or 'False'"
         raise Exception(msg)
     return v == "True"
 
 
 def envint(s: str, default: str) -> int | None:
     v = os.getenv(s, default)
-    if v == "None":
-        return None
-
-    return int(v)
+    return None if v == "None" else int(v)
 
 
 SECRET_KEY = os.getenv("SECRET_KEY", "---")
@@ -41,7 +38,7 @@ if admins := os.getenv("ADMINS"):
 
 VERSION = ""
 with open(os.path.join(BASE_DIR, "CHANGELOG.md"), encoding="utf-8") as f:
-    for line in f.readlines():
+    for line in f:
         if line.startswith("## v"):
             VERSION = line.split()[1]
             break
@@ -116,7 +113,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
 DATABASES: Mapping[str, Any] = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
-        "NAME": os.getenv("DB_NAME", BASE_DIR + "/hc.sqlite"),
+        "NAME": os.getenv("DB_NAME", f"{BASE_DIR}/hc.sqlite"),
     }
 }
 
@@ -164,7 +161,7 @@ SITE_ROOT = os.getenv("SITE_ROOT", "http://localhost:8000")
 SITE_NAME = os.getenv("SITE_NAME", "Mychecks")
 SITE_LOGO_URL = os.getenv("SITE_LOGO_URL")
 MASTER_BADGE_LABEL = os.getenv("MASTER_BADGE_LABEL", SITE_NAME)
-PING_ENDPOINT = os.getenv("PING_ENDPOINT", SITE_ROOT + "/ping/")
+PING_ENDPOINT = os.getenv("PING_ENDPOINT", f"{SITE_ROOT}/ping/")
 PING_EMAIL_DOMAIN = os.getenv("PING_EMAIL_DOMAIN", "localhost")
 PING_BODY_LIMIT = envint("PING_BODY_LIMIT", "10000")
 STATIC_URL = "/static/"

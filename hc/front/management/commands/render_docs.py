@@ -37,10 +37,10 @@ class Command(BaseCommand):
                 if not doc.endswith(".md"):
                     continue
 
-                print("Rendering %s" % doc)
+                print(f"Rendering {doc}")
 
                 src_path = os.path.join(path, doc)
-                dst_path = os.path.join(path, doc[:-3] + ".html-fragment")
+                dst_path = os.path.join(path, f"{doc[:-3]}.html-fragment")
 
                 text = open(src_path, "r", encoding="utf-8").read()
                 html = markdown.markdown(

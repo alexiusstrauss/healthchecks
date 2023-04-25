@@ -142,7 +142,7 @@ class ProfileAdmin(admin.ModelAdmin):
     def email(self, obj):
         s = escape(obj.user.email)
         if obj.plan:
-            s = "%s <span>%s</span>" % (s, obj.plan)
+            s = f"{s} <span>{obj.plan}</span>"
 
         return s
 
@@ -157,7 +157,7 @@ class ProfileAdmin(admin.ModelAdmin):
     def checks(self, obj):
         s = "%d of %d" % (obj.num_checks, obj.check_limit)
         if obj.num_checks > 1:
-            s = "<b>%s</b>" % s
+            s = f"<b>{s}</b>"
         return s
 
     def invited(self, obj):
@@ -219,10 +219,7 @@ class ProjectAdmin(admin.ModelAdmin):
         return qs
 
     def name_(self, obj):
-        if obj.name:
-            return obj.name
-
-        return "Default Project for %s" % obj.owner.email
+        return obj.name if obj.name else f"Default Project for {obj.owner.email}"
 
     @mark_safe
     def users(self, obj):
@@ -240,7 +237,7 @@ class ProjectAdmin(admin.ModelAdmin):
     @mark_safe
     def switch(self, obj):
         url = reverse("hc-checks", args=[obj.code])
-        return "<a href='%s'>Show Checks</a>" % url
+        return f"<a href='{url}'>Show Checks</a>"
 
 
 class HcUserAdmin(UserAdmin):

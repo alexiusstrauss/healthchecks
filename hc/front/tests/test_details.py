@@ -234,7 +234,7 @@ class DetailsTestCase(BaseTestCase):
 
     def test_it_saves_url_format_preference(self):
         self.client.login(username="alice@example.org", password="password")
-        self.client.get(self.url + "?urls=slug")
+        self.client.get(f"{self.url}?urls=slug")
 
         self.project.refresh_from_db()
         self.assertTrue(self.project.show_slugs)

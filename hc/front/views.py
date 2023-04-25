@@ -91,8 +91,8 @@ def _tags_statuses(checks):
             for tag in check.tags_list():
                 tags[tag] = "up"
 
-    tags.update(grace)
-    tags.update(down)
+    tags |= grace
+    tags |= down
     return tags, num_down
 
 
@@ -191,9 +191,7 @@ def _refresh_last_active_date(profile):
 
 def _get_referer_qs(request):
     parsed = urlparse(request.META.get("HTTP_REFERER", ""))
-    if parsed.query:
-        return "?" + parsed.query
-    return ""
+    return f"?{parsed.query}" if parsed.query else ""
 
 
 @login_required
@@ -249,13 +247,7 @@ def my_checks(request, code):
             else:
                 seen.add(check.slug)
 
-    # Do we need to show the "Last Duration" header?
-    show_last_duration = False
-    for check in checks:
-        if check.clamped_last_duration():
-            show_last_duration = True
-            break
-
+    show_last_duration = any(check.clamped_last_duration() for check in checks)
     ctx = {
         "page": "checks",
         "rw": rw,
@@ -400,7 +392,7 @@ def _replace_placeholders(doc, html):
         "SITE_HOSTNAME": site_hostname(),
         "SITE_SCHEME": urlparse(settings.SITE_ROOT).scheme,
         "PING_ENDPOINT": settings.PING_ENDPOINT,
-        "PING_URL": settings.PING_ENDPOINT + "your-uuid-here",
+        "PING_URL": f"{settings.PING_ENDPOINT}your-uuid-here",
         "PING_BODY_LIMIT": str(settings.PING_BODY_LIMIT or 100),
         "IMG_URL": os.path.join(settings.STATIC_URL, "img/docs"),
     }
@@ -417,7 +409,9 @@ def serve_doc(request, doc="introduction"):
     if not re.match(r"^[0-9a-z_]+$", doc):
         raise Http404("not found")
 
-    path = os.path.join(settings.BASE_DIR, "templates/docs", doc + ".html-fragment")
+    path = os.path.join(
+        settings.BASE_DIR, "templates/docs", f"{doc}.html-fragment"
+    )
     if not os.path.exists(path):
         raise Http404("not found")
 
@@ -594,7 +588,7 @@ def cron_preview(request):
     now_local = now().astimezone(ZoneInfo(tz))
     try:
         it = CronSim(schedule, now_local)
-        for i in range(0, 6):
+        for _ in range(6):
             ctx["dates"].append(next(it))
     except (CronSimError, StopIteration):
         ctx["bad_schedule"] = True
@@ -630,13 +624,7 @@ def validate_schedule(request):
 def ping_details(request, code, n=None):
     check, rw = _get_check_for_user(request, code)
     q = Ping.objects.filter(owner=check)
-    if n:
-        q = q.filter(n=n)
-    else:
-        # When n is not specified, look up the most recent success or failure,
-        # ignoring "start", "log", "ign" events
-        q = q.exclude(kind__in=("start", "log", "ign"))
-
+    q = q.filter(n=n) if n else q.exclude(kind__in=("start", "log", "ign"))
     try:
         ping = q.latest("created")
     except Ping.DoesNotExist:
@@ -656,21 +644,11 @@ def ping_details(request, code, n=None):
         parsed = email.message_from_string(body, policy=email.policy.SMTP)
         ctx["subject"] = parsed.get("subject", "")
 
-        # The "active" tab is set to show the value that's successfully parsed last. Per the current implementation,
-        # this means that if both plain text and HTML content are present, the ping details dialog will initially
-        # display the HTML content, otherwise - only one content type exists, and we default to that (either plain text
-        # or HTML, at least one of them should exist in a valid email).
-        #
-        # NOTE: If both plain text and html have not been parsed successfully the "active" tab is not set at all, but
-        # currently this is not an issue since in this case the "ping details" template does not render any tabs.
-
-        plain_mime_part = parsed.get_body(("plain",))
-        if plain_mime_part:
+        if plain_mime_part := parsed.get_body(("plain",)):
             ctx["plain"] = plain_mime_part.get_content()
             ctx["active"] = "plain"
 
-        html_mime_part = parsed.get_body(("html",))
-        if html_mime_part:
+        if html_mime_part := parsed.get_body(("html",)):
             ctx["html"] = html_mime_part.get_content()
             ctx["active"] = "html"
 
@@ -687,7 +665,7 @@ def ping_body(request, code, n):
         raise Http404("not found")
 
     response = HttpResponse(body, content_type="application/octet-stream")
-    filename = "%s-%s" % (check.code, ping.n)
+    filename = f"{check.code}-{ping.n}"
     response["Content-Disposition"] = f'attachment; filename="{filename}.txt"'
     return response
 
@@ -786,9 +764,11 @@ def _get_events(check, page_limit, start=None, end=None):
                 num_misses += 1
             else:
                 ping.duration = None
-                if starts[ping.rid]:
-                    if ping.created - starts[ping.rid] < MAX_DURATION:
-                        ping.duration = ping.created - starts[ping.rid]
+                if (
+                    starts[ping.rid]
+                    and ping.created - starts[ping.rid] < MAX_DURATION
+                ):
+                    ping.duration = ping.created - starts[ping.rid]
 
             starts[ping.rid] = None
 
@@ -909,9 +889,11 @@ def transfer(request: HttpRequest, code: UUID) -> HttpResponse:
             return HttpResponseBadRequest()
 
         target_project = _get_rw_project_for_user(request, form.cleaned_data["project"])
-        if target_project.owner_id != check.project.owner_id:
-            if target_project.num_checks_available() <= 0:
-                return HttpResponseBadRequest()
+        if (
+            target_project.owner_id != check.project.owner_id
+            and target_project.num_checks_available() <= 0
+        ):
+            return HttpResponseBadRequest()
 
         check.project = target_project
         check.save()
@@ -932,10 +914,10 @@ def copy(request, code):
     if check.project.num_checks_available() <= 0:
         return HttpResponseBadRequest()
 
-    new_name = check.name + " (copy)"
+    new_name = f"{check.name} (copy)"
     # Make sure we don't exceed the 100 character db field limit:
     if len(new_name) > 100:
-        new_name = check.name[:90] + "... (copy)"
+        new_name = f"{check.name[:90]}... (copy)"
 
     copied = Check(project=check.project)
     copied.set_name_slug(new_name)
@@ -958,7 +940,7 @@ def copy(request, code):
     copied.channel_set.add(*check.channel_set.all())
 
     url = reverse("hc-details", args=[copied.code])
-    return redirect(url + "?copied")
+    return redirect(f"{url}?copied")
 
 
 @login_required
@@ -967,10 +949,7 @@ def status_single(request, code):
 
     status = check.get_status()
     events = _get_events(check, 20)
-    updated = "1"
-    if len(events):
-        updated = str(events[0].created.timestamp())
-
+    updated = str(events[0].created.timestamp()) if len(events) else "1"
     doc = {
         "status": status,
         "status_text": STATUS_TEXT_TMPL.render({"check": check, "rw": rw}),
@@ -1001,20 +980,18 @@ def badges(request, code):
     sorted_tags.append("*")  # For the "overall status" badge
 
     key = project.badge_key
-    urls = []
-    for tag in sorted_tags:
-        urls.append(
-            {
-                "tag": tag,
-                "svg": get_badge_url(key, tag),
-                "svg3": get_badge_url(key, tag, with_late=True),
-                "json": get_badge_url(key, tag, fmt="json"),
-                "json3": get_badge_url(key, tag, fmt="json", with_late=True),
-                "shields": get_badge_url(key, tag, fmt="shields"),
-                "shields3": get_badge_url(key, tag, fmt="shields", with_late=True),
-            }
-        )
-
+    urls = [
+        {
+            "tag": tag,
+            "svg": get_badge_url(key, tag),
+            "svg3": get_badge_url(key, tag, with_late=True),
+            "json": get_badge_url(key, tag, fmt="json"),
+            "json3": get_badge_url(key, tag, fmt="json", with_late=True),
+            "shields": get_badge_url(key, tag, fmt="shields"),
+            "shields3": get_badge_url(key, tag, fmt="shields", with_late=True),
+        }
+        for tag in sorted_tags
+    ]
     ctx = {
         "have_tags": len(urls) > 1,
         "page": "badges",
@@ -1186,7 +1163,7 @@ def send_test_notification(request: HttpRequest, code: UUID) -> HttpResponse:
         error = channel.notify(dummy, is_test=True)
 
     if error:
-        messages.warning(request, "Could not send a test notification. %s." % error)
+        messages.warning(request, f"Could not send a test notification. {error}.")
     else:
         messages.success(request, "Test notification sent!")
 
@@ -1532,7 +1509,7 @@ def add_slack_complete(request: HttpRequest) -> HttpResponse:
         messages.success(request, "The Slack integration has been added!")
     else:
         s = doc.get("error")
-        messages.warning(request, "Error message from slack: %s" % s)
+        messages.warning(request, f"Error message from slack: {s}")
 
     return redirect("hc-channels", project.code)
 
@@ -2348,7 +2325,7 @@ def add_linenotify_complete(request):
     token = doc["access_token"]
     result = curl.get(
         "https://notify-api.line.me/api/status",
-        headers={"Authorization": "Bearer %s" % token},
+        headers={"Authorization": f"Bearer {token}"},
     )
     doc = result.json()
 

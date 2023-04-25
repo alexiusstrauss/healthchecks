@@ -30,14 +30,12 @@ class NotifyZulipTestCase(BaseTestCase):
         self.channel.checks.add(self.check)
 
     def definition(self, **kwargs):
-        d = {
+        return {
             "bot_email": "bot@example.org",
             "api_key": "fake-key",
             "mtype": "stream",
             "to": "general",
-        }
-        d.update(kwargs)
-        return d
+        } | kwargs
 
     @patch("hc.api.transports.curl.request")
     def test_it_works(self, mock_post):

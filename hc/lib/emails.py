@@ -17,7 +17,7 @@ class EmailThread(Thread):
         self.message = message
 
     def run(self):
-        for attempt in range(0, self.MAX_TRIES):
+        for attempt in range(self.MAX_TRIES):
             try:
                 # Make sure each retry creates a new connection:
                 self.message.connection = None
@@ -35,9 +35,9 @@ class EmailThread(Thread):
 
 
 def make_message(name, to, ctx, headers={}):
-    subject = render("emails/%s-subject.html" % name, ctx).strip()
-    body = render("emails/%s-body-text.html" % name, ctx)
-    html = render("emails/%s-body-html.html" % name, ctx)
+    subject = render(f"emails/{name}-subject.html", ctx).strip()
+    body = render(f"emails/{name}-body-text.html", ctx)
+    html = render(f"emails/{name}-body-html.html", ctx)
 
     msg = EmailMultiAlternatives(subject, body, to=(to,), headers=headers)
     msg.attach_alternative(html, "text/html")

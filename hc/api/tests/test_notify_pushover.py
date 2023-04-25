@@ -38,7 +38,7 @@ class NotifyPushoverTestCase(BaseTestCase):
         self.assertEqual(Notification.objects.count(), 1)
 
         args, kwargs = mock_post.call_args
-        self.assertEqual(args[1], API + "/messages.json")
+        self.assertEqual(args[1], f"{API}/messages.json")
 
         payload = kwargs["data"]
         self.assertEqual(payload["title"], "Foo is DOWN")
@@ -88,7 +88,7 @@ class NotifyPushoverTestCase(BaseTestCase):
         self.assertEqual(mock_post.call_count, 2)
 
         cancel_args, cancel_kwargs = mock_post.call_args_list[0]
-        expected = "/receipts/cancel_by_tag/%s.json" % self.check.unique_key
+        expected = f"/receipts/cancel_by_tag/{self.check.unique_key}.json"
         self.assertEqual(cancel_args[1], API + expected)
 
         up_args, up_kwargs = mock_post.call_args_list[1]
@@ -136,7 +136,7 @@ class NotifyPushoverTestCase(BaseTestCase):
         self._setup_data("123|0")
         mock_post.return_value.status_code = 200
 
-        for i in range(0, 11):
+        for i in range(11):
             other = Check(project=self.project)
             other.name = f"Foobar #{i}"
             other.status = "down"

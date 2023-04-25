@@ -47,7 +47,7 @@ class PingDetailsTestCase(BaseTestCase):
     def setUp(self):
         super().setUp()
         self.check = Check.objects.create(project=self.project)
-        self.url = "/checks/%s/last_ping/" % self.check.code
+        self.url = f"/checks/{self.check.code}/last_ping/"
 
     def test_it_works(self):
         Ping.objects.create(owner=self.check, n=1, body_raw=b"this is body")
@@ -80,7 +80,7 @@ class PingDetailsTestCase(BaseTestCase):
         Ping.objects.create(owner=self.check, n=1, body="this is body")
 
         r = self.client.get(self.url)
-        self.assertRedirects(r, "/accounts/login/?next=" + self.url)
+        self.assertRedirects(r, f"/accounts/login/?next={self.url}")
 
     def test_it_shows_fail(self):
         Ping.objects.create(owner=self.check, n=1, kind="fail")
@@ -139,7 +139,7 @@ class PingDetailsTestCase(BaseTestCase):
 
     def test_it_handles_missing_ping(self):
         self.client.login(username="alice@example.org", password="password")
-        r = self.client.get("/checks/%s/pings/123/" % self.check.code)
+        r = self.client.get(f"/checks/{self.check.code}/pings/123/")
         self.assertContains(r, "No additional information is", status_code=200)
 
     def test_it_shows_nonzero_exitstatus(self):

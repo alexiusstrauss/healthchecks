@@ -91,14 +91,14 @@ class MyChecksTestCase(BaseTestCase):
 
     def test_it_saves_sort_field(self):
         self.client.login(username="alice@example.org", password="password")
-        self.client.get(self.url + "?sort=name")
+        self.client.get(f"{self.url}?sort=name")
 
         self.profile.refresh_from_db()
         self.assertEqual(self.profile.sort, "name")
 
     def test_it_ignores_bad_sort_value(self):
         self.client.login(username="alice@example.org", password="password")
-        self.client.get(self.url + "?sort=invalid")
+        self.client.get(f"{self.url}?sort=invalid")
 
         self.profile.refresh_from_db()
         self.assertEqual(self.profile.sort, "created")
@@ -170,7 +170,7 @@ class MyChecksTestCase(BaseTestCase):
 
     def test_it_saves_url_format_preference(self):
         self.client.login(username="alice@example.org", password="password")
-        self.client.get(self.url + "?urls=slug")
+        self.client.get(f"{self.url}?urls=slug")
 
         self.project.refresh_from_db()
         self.assertTrue(self.project.show_slugs)

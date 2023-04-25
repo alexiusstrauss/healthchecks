@@ -68,7 +68,7 @@ class LoginTotpTestCase(BaseTestCase):
     def test_it_redirects_after_login(self, mock_TOTP):
         mock_TOTP.return_value.verify.return_value = True
 
-        url = self.url + "?next=" + self.channels_url
+        url = f"{self.url}?next={self.channels_url}"
         r = self.client.post(url, {"code": "000000"})
         self.assertRedirects(r, self.channels_url)
 

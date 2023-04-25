@@ -15,7 +15,7 @@ class CheckTokenTestCase(BaseTestCase):
 
         signed_token = TimestampSigner().sign("secret-token")
         self.url = f"/accounts/check_token/alice/{signed_token}/"
-        self.checks_url = "/projects/%s/checks/" % self.project.code
+        self.checks_url = f"/projects/{self.project.code}/checks/"
 
     def test_it_shows_form(self):
         r = self.client.get(self.url)
@@ -52,12 +52,12 @@ class CheckTokenTestCase(BaseTestCase):
         self.assertContains(r, "incorrect or expired")
 
     def test_it_handles_next_parameter(self):
-        url = self.url + "?next=" + self.channels_url
+        url = f"{self.url}?next={self.channels_url}"
         r = self.client.post(url)
         self.assertRedirects(r, self.channels_url)
 
     def test_it_ignores_bad_next_parameter(self):
-        url = self.url + "?next=/evil/"
+        url = f"{self.url}?next=/evil/"
         r = self.client.post(url)
         self.assertRedirects(r, self.checks_url)
 

@@ -8,8 +8,8 @@ class UncloakTestCase(BaseTestCase):
     def setUp(self):
         super().setUp()
         self.check = Check.objects.create(project=self.project, status="paused")
-        self.url = "/cloaked/%s/" % self.check.unique_key
-        self.redirect_url = "/checks/%s/details/" % self.check.code
+        self.url = f"/cloaked/{self.check.unique_key}/"
+        self.redirect_url = f"/checks/{self.check.code}/details/"
 
     def test_it_redirects(self):
         self.client.login(username="alice@example.org", password="password")
@@ -28,4 +28,4 @@ class UncloakTestCase(BaseTestCase):
 
     def test_it_requires_logged_in_user(self):
         r = self.client.get(self.url)
-        self.assertRedirects(r, "/accounts/login/?next=" + self.url)
+        self.assertRedirects(r, f"/accounts/login/?next={self.url}")

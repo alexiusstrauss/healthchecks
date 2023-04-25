@@ -8,7 +8,7 @@ class TextOnlyParser(HTMLParser):
         super().__init__(*args, **kwargs)
         self.active = True
         self.buf = []
-        self.skiplist = set(["script", "style"])
+        self.skiplist = {"script", "style"}
 
     def handle_starttag(self, tag, attrs):
         if tag in self.skiplist:

@@ -27,4 +27,4 @@ class Command(BaseCommand):
         if r.status_code != 200:
             return "Fail: status=%d, %s" % (r.status_code, r.content)
 
-        return "Done, Telegram's webhook set to: %s" % form["url"]
+        return f"""Done, Telegram's webhook set to: {form["url"]}"""

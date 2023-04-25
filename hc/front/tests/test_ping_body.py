@@ -18,7 +18,7 @@ class PingBodyTestCase(BaseTestCase):
 
     def test_it_requires_logged_in_user(self):
         r = self.client.get(self.url)
-        self.assertRedirects(r, "/accounts/login/?next=" + self.url)
+        self.assertRedirects(r, f"/accounts/login/?next={self.url}")
 
     def test_it_handles_missing_ping(self):
         self.ping.delete()

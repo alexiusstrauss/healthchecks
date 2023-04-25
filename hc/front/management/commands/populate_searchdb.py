@@ -29,7 +29,7 @@ class Command(BaseCommand):
                 continue
 
             slug = filename[:-5]  # cut ".html"
-            print("Processing %s" % slug)
+            print(f"Processing {slug}")
 
             html = open(os.path.join(docs_path, filename), "r").read()
             html = _replace_placeholders(slug, html)

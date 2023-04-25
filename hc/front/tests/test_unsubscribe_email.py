@@ -54,7 +54,7 @@ class UnsubscribeEmailTestCase(BaseTestCase):
         self.assertContains(r, "submit()", status_code=200)
 
     def test_it_checks_signature(self):
-        signed_token = self.channel.make_token() + ":bad:signature"
+        signed_token = f"{self.channel.make_token()}:bad:signature"
         url = f"/integrations/{self.channel.code}/unsub/{signed_token}/"
 
         r = self.client.get(url)
